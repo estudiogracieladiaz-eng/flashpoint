@@ -545,6 +545,7 @@ footer {
 .login-cancel{display:block;text-align:center;margin-top:14px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#555;background:transparent;border:none;width:100%;transition:color .14s;cursor:pointer;font-family:'Montserrat',sans-serif}
 .login-cancel:hover{color:#fff}
 /* ADMIN PANEL */
+#publicView{position:relative}
 #adminView{--bg:#0a0a0a;--bg2:#111;--bg3:#181818;--bg4:#222;--bg5:#2a2a2a;--red:#CC0000;--red-dim:rgba(204,0,0,0.15);--red-b:rgba(204,0,0,0.3);--white:#f0ece6;--off:#b8b4af;--muted:#555;--muted2:#3a3a3a;--green:#22c55e;--amber:#f59e0b;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);min-height:100vh;background:var(--bg);color:var(--white);font-family:'Montserrat',sans-serif;font-weight:300}
 .adm-layout{display:flex;min-height:100vh}
 .adm-sb{width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:40;overflow-y:auto}
@@ -552,9 +553,9 @@ footer {
 .adm-logo-txt{font-weight:700;font-size:18px;letter-spacing:-0.02em}
 .adm-logo-txt .dot{color:var(--red)}
 .adm-logo-sub{font-size:9px;letter-spacing:0.24em;text-transform:uppercase;color:var(--muted);margin-top:3px}
-.adm-nav{flex:1;padding:10px 0}
+.adm-nav{flex:1;padding:10px 0;display:block}
 .adm-nav-sec{padding:13px 15px 4px;font-size:9px;letter-spacing:0.28em;text-transform:uppercase;color:var(--muted2)}
-.adm-ni{display:flex;align-items:center;gap:9px;padding:8px 11px;margin:1px 7px;border-radius:4px;font-size:13px;color:rgba(240,236,230,.48);background:transparent;border:none;width:calc(100% - 14px);text-align:left;transition:all .12s;cursor:pointer;font-family:'Montserrat',sans-serif}
+#adminView .adm-ni{display:flex;align-items:center;gap:9px;padding:8px 11px;margin:1px 7px;border-radius:4px;font-size:13px;color:rgba(240,236,230,.48);background:transparent;border:none;width:calc(100% - 14px);text-align:left;transition:all .12s;cursor:pointer;font-family:'Montserrat',sans-serif}
 .adm-ni:hover{background:var(--bg3);color:var(--white)}
 .adm-ni.active{background:var(--red-dim);color:var(--white);font-weight:500}
 .adm-ni.active .ni-ico{color:var(--red)}
@@ -566,7 +567,7 @@ footer {
 .adm-logout{margin-top:9px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);background:transparent;border:none;padding:0;transition:color .12s;cursor:pointer;font-family:'Montserrat',sans-serif}
 .adm-logout:hover{color:var(--white)}
 .adm-main{margin-left:220px;flex:1;min-height:100vh}
-.adm-topbar{display:flex;align-items:center;justify-content:space-between;padding:15px 34px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(10,10,10,.95);backdrop-filter:blur(8px);z-index:30}
+#adminView .adm-topbar{display:flex;align-items:center;justify-content:space-between;padding:15px 34px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(10,10,10,.98);backdrop-filter:blur(8px);z-index:30}
 .adm-tb-title{font-size:16px;font-weight:600;letter-spacing:-0.01em}
 .adm-tb-acts{display:flex;gap:7px;align-items:center}
 .adm-pg{display:none;padding:30px 34px;animation:pgIn .16s ease}
@@ -1041,7 +1042,7 @@ boot();
       <div class="adm-logo-txt">Flashpoint<span class="dot">.</span></div>
       <div class="adm-logo-sub">Panel Admin</div>
     </div>
-    <nav class="adm-nav">
+    <div class="adm-nav">
       <div class="adm-nav-sec">Gestión</div>
       <button class="adm-ni active" onclick="aGoTo('dashboard',this)"><span class="ni-ico">◈</span><span>Dashboard</span></button>
       <button class="adm-ni" onclick="aGoTo('events',this)"><span class="ni-ico">◉</span><span>Eventos</span></button>
@@ -1050,7 +1051,7 @@ boot();
       <div class="adm-nav-sec">Finanzas</div>
       <button class="adm-ni" onclick="aGoTo('expenses',this)"><span class="ni-ico">◑</span><span>Gastos</span></button>
       <button class="adm-ni" onclick="aGoTo('reports',this)"><span class="ni-ico">◒</span><span>Reportes P&L</span></button>
-    </nav>
+    </div>
     <div class="adm-sb-btm">
       <div class="adm-user-row"><div class="adm-avatar">A</div><div><div class="adm-user-n">Admin</div></div></div>
       <button class="adm-logout" onclick="aLogout()">← Volver al sitio</button>
