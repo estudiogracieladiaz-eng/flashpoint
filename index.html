@@ -847,8 +847,7 @@ tr:hover td{background:rgba(255,255,255,.012)}
 /* ─── SUPABASE ─── */
 const SURL='https://dtmulatpgeqoeaqbeujm.supabase.co';
 const SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0bXVsYXRwZ2Vxb2VhcWJldWptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQwNTEsImV4cCI6MjA5NTkzMDA1MX0.SPVb6cCMLeznSeSDe-eY8SZ2Ysazif5cx0pL79MQggk';
-const{createClient}=supabase;
-const db=createClient(SURL,SKEY);
+const db=window.supabase.createClient(SURL,SKEY);
 
 /* ─── HELPERS ─── */
 const fmt=n=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(n||0);
