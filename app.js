@@ -240,7 +240,7 @@ function loadPublic(){
     var flyerUrl=flyer[0]?flyer[0].value:null;
     var ticketUrl=ticket[0]?ticket[0].value:null;
     var featEl=document.getElementById('featuredEvent');
-    if(featEl){
+    if(featEl && (flyerUrl || ticketUrl)){
       var flyerHtml=flyerUrl
         ?'<img src="'+flyerUrl+'" alt="Proximo evento" style="width:100%;height:100%;object-fit:contain;background:#000;">'
         :'<div style="min-height:500px;background:#0a0a0a;display:flex;align-items:center;justify-content:center;"><span style="font-family:Bebas Neue,sans-serif;font-size:80px;color:#1a1a1a;">FP</span></div>';
