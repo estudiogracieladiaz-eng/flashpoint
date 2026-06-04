@@ -912,7 +912,7 @@ async function loadTkVals(){const evId=document.getElementById('tkEv').value;con
 
 /* ─── SAVE ─── */
 async function saveEv(){
-  const ev={id:uid(),name:document.getElementById('evN').value||'Nuevo Evento',date:document.getElementById('evD').value,venue:document.getElementById('evV').value,flyer:document.getElementById('evFlyer').value,capacity:Number(document.getElementById('evCap').value)||300,link:document.getElementById('evLnk').value,headliner:document.getElementById('evHL').value,support:document.getElementById('evSup').value.split(',').map(s=>s.trim()).filter(Boolean),price1:Number(document.getElementById('evP1').value)||0,price2:Number(document.getElementById('evP2').value)||0,price3:Number(document.getElementById('evP3').value)||0,status:document.getElementById('evSt').value};
+  const ev={id:uid(),name:document.getElementById('evN').value||'Nuevo Evento',date:document.getElementById('evD').value,venue:document.getElementById('evV').value,flyer:document.getElementById('evFlyer').value,capacity:Number(document.getElementById('evCap').value)||300,link:document.getElementById('evLnk').value,headliner:document.getElementById('evHL').value,support:document.getElementById('evSup').value.split(',').map(s=>s.trim()).filter(Boolean),price1:Number(document.getElementById('evP1').value)||0,price2:Number(document.getElementById('evP2').value)||0,price3:Number(document.getElementById('evP3').value)||0,status:document.getElementById('evSt').value,type:document.getElementById('evType').value||'calendar'};
   await db.from('events').insert(ev);cM('mEv');await rEvents();await rPub();
 }
 async function saveAr(){
@@ -945,7 +945,8 @@ async function updateSb(){} // placeholder
 async function rPub(){
   const evs=await gEv();
   const upcoming=evs.filter(e=>e.status==='upcoming').sort((a,b)=>a.date.localeCompare(b.date));
-  const featured=upcoming[0];
+  const featured=upcoming.find(e=>e.type==='featured')||null;
+  const calendarEvs=upcoming;
   // Featured event card
   const featEl=document.getElementById('featuredEvent');
   if(featEl){
@@ -959,7 +960,7 @@ async function rPub(){
   // Upcoming list
   const listEl=document.getElementById('upcomingList');
   if(listEl){
-    listEl.innerHTML=upcoming.length?upcoming.map(e=>{
+    listEl.innerHTML=calendarEvs.length?calendarEvs.map(e=>{
       const d=fmtDS(e.date);
       const support=(e.support||[]).join(' b2b ');
       return`<div class="upcoming-item is-visible">
@@ -1127,6 +1128,7 @@ boot();
   <div class="fg"><label class="fl">URL del Flyer</label><input class="fi" id="evFlyer" placeholder="https://i.imgur.com/..."></div>
   <div class="fr"><div class="fg"><label class="fl">Headliner</label><input class="fi" id="evHL" placeholder="Charlie"></div><div class="fg"><label class="fl">Soporte (separados por coma)</label><input class="fi" id="evSup" placeholder="Tomas Benedini, Martin Pose"></div></div>
   <div class="fr"><div class="fg"><label class="fl">Capacidad</label><input class="fi" type="number" id="evCap" placeholder="300"></div><div class="fg"><label class="fl">Estado</label><select class="fs" id="evSt"><option value="upcoming">Próximo</option><option value="past">Pasado</option></select></div></div>
+  <div class="fg"><label class="fl">¿Dónde aparece?</label><select class="fs" id="evType"><option value="calendar">Solo en Calendario</option><option value="featured">Próximo Evento + Calendario</option></select></div>
   <div class="fr"><div class="fg"><label class="fl">Preventa 1 ($)</label><input class="fi" type="number" id="evP1" placeholder="3500"></div><div class="fg"><label class="fl">Preventa 2 ($)</label><input class="fi" type="number" id="evP2" placeholder="5000"></div><div class="fg"><label class="fl">Puerta ($)</label><input class="fi" type="number" id="evP3" placeholder="7000"></div></div>
   <div class="fg"><label class="fl">Link Ticketera</label><input class="fi" id="evLnk" placeholder="https://passline.com/..."></div>
   <button class="btn btn-red" style="width:100%;margin-top:9px" onclick="saveEv()">Guardar Evento</button>
