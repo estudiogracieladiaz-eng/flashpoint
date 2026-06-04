@@ -995,7 +995,7 @@ async function rDash(){
 }
 async function rEvents(){
   const evs=await gEv();const tks=await gTk();
-  document.getElementById('admEvList').innerHTML=evs.length?evs.map(e=>{const s=tkAll(e,tks);const pct=Math.min(100,Math.round(s/e.capacity*100));return`<div class="adm-ev-card"><div class="ec-date">${fmtD(e.date)}</div><div class="ec-name">${e.name}</div><div class="ec-venue">${e.venue}</div><div class="ec-pills"><span class="pill hl">${e.headliner||'—'}</span>${(e.support||[]).map(s=>`<span class="pill">${s}</span>`).join('')}</div><div class="prog-lbl"><span>Ocupación</span><span>${pct}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div><div style="margin-top:10px;display:flex;gap:7px"><button onclick="oMTk()" class="btn btn-ghost btn-xs">Ventas</button><button onclick="delRow('events','${e.id}',rEvents)" class="btn btn-ghost btn-xs" style="color:var(--muted)">Eliminar</button></div></div>`}).join(''):`<div class="empty" style="grid-column:1/-1"><div class="empty-ico">◎</div>Sin eventos.</div>`;
+  document.getElementById('admEvList').innerHTML=evs.length?evs.map(e=>{const s=tkAll(e,tks);const pct=Math.min(100,Math.round(s/e.capacity*100));return`<div class="adm-ev-card"><div class="ec-date">${fmtD(e.date)}</div><div class="ec-name">${e.name}</div><div class="ec-venue">${e.venue}</div><div class="ec-pills"><span class="pill hl">${e.headliner||'—'}</span>${(e.support||[]).map(s=>`<span class="pill">${s}</span>`).join('')}</div><div class="prog-lbl"><span>Ocupación</span><span>${pct}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div><div style="margin-top:10px;display:flex;gap:7px"><button onclick="openEditEv('${e.id}')" class="btn btn-ghost btn-xs">✏ Editar</button><button onclick="oMTk()" class="btn btn-ghost btn-xs">Ventas</button><button onclick="delRow('events','${e.id}',rEvents)" class="btn btn-ghost btn-xs" style="color:var(--muted)">Eliminar</button></div></div>`}).join(''):`<div class="empty" style="grid-column:1/-1"><div class="empty-ico">◎</div>Sin eventos.</div>`;
 }
 async function rArtists(){
   const ars=await gAr();
@@ -1022,7 +1022,30 @@ async function rReports(){
   document.getElementById('admRepTable').innerHTML=`<table><thead><tr><th>Evento</th><th>Fecha</th><th>Ingresos</th><th>Gastos</th><th>Resultado</th></tr></thead><tbody>${evs.map(e=>{const rev=tkRev(e,tks);const exp=evExp(e.id,exs);const bl=rev-exp;return`<tr><td><strong>${e.name}</strong></td><td>${fmtD(e.date)}</td><td style="color:var(--green)">${fmt(rev)}</td><td style="color:var(--red)">${fmt(exp)}</td><td style="color:${bl>=0?'var(--green)':'var(--red)'}"><strong>${fmt(bl)}</strong></td></tr>`}).join('')}</tbody></table>`;
 }
 
-/* ─── REALTIME + BOOT ─── */
+async function openEditEv(id){
+  const evs=await gEv();const e=evs.find(x=>x.id===id);if(!e)return;
+  document.getElementById('evEditId').value=e.id;
+  document.getElementById('evEditN').value=e.name||'';
+  document.getElementById('evEditD').value=e.date||'';
+  document.getElementById('evEditV').value=e.venue||'';
+  document.getElementById('evEditFlyer').value=e.flyer||'';
+  document.getElementById('evEditHL').value=e.headliner||'';
+  document.getElementById('evEditSup').value=(e.support||[]).join(', ');
+  document.getElementById('evEditCap').value=e.capacity||300;
+  document.getElementById('evEditSt').value=e.status||'upcoming';
+  document.getElementById('evEditType').value=e.type||'calendar';
+  document.getElementById('evEditP1').value=e.price1||0;
+  document.getElementById('evEditP2').value=e.price2||0;
+  document.getElementById('evEditP3').value=e.price3||0;
+  document.getElementById('evEditLnk').value=e.link||'';
+  oM('mEvEdit');
+}
+async function updateEv(){
+  const id=document.getElementById('evEditId').value;
+  const ev={name:document.getElementById('evEditN').value,date:document.getElementById('evEditD').value,venue:document.getElementById('evEditV').value,flyer:document.getElementById('evEditFlyer').value,headliner:document.getElementById('evEditHL').value,support:document.getElementById('evEditSup').value.split(',').map(s=>s.trim()).filter(Boolean),capacity:Number(document.getElementById('evEditCap').value)||300,status:document.getElementById('evEditSt').value,type:document.getElementById('evEditType').value||'calendar',price1:Number(document.getElementById('evEditP1').value)||0,price2:Number(document.getElementById('evEditP2').value)||0,price3:Number(document.getElementById('evEditP3').value)||0,link:document.getElementById('evEditLnk').value};
+  await db.from('events').update(ev).eq('id',id);
+  cM('mEvEdit');await rEvents();await rPub();
+}/* ─── REALTIME + BOOT ─── */
 function setupRealtime(){
   db.channel('db-changes')
     .on('postgres_changes',{event:'*',schema:'public',table:'events'},async()=>{await rPub()})
@@ -1134,7 +1157,7 @@ boot();
   <button class="btn btn-red" style="width:100%;margin-top:9px" onclick="saveEv()">Guardar Evento</button>
 </div></div>
 
-<!-- MODAL ARTISTA -->
+<div class="m-ov" id="mEvEdit"><div class="m-box"><button class="m-x" onclick="cM(chr39mEvEditchr39)">X</button><div class="m-title">Editar Evento</div><input type="hidden" id="evEditId"><div class="fr"><div class="fg"><label class="fl">Nombre</label><input class="fi" id="evEditN"></div><div class="fg"><label class="fl">Fecha</label><input class="fi" type="date" id="evEditD"></div></div><div class="fg"><label class="fl">Venue</label><input class="fi" id="evEditV"></div><div class="fg"><label class="fl">URL Flyer</label><input class="fi" id="evEditFlyer"></div><div class="fr"><div class="fg"><label class="fl">Headliner</label><input class="fi" id="evEditHL"></div><div class="fg"><label class="fl">Soporte</label><input class="fi" id="evEditSup"></div></div><div class="fr"><div class="fg"><label class="fl">Capacidad</label><input class="fi" type="number" id="evEditCap"></div><div class="fg"><label class="fl">Estado</label><select class="fs" id="evEditSt"><option value="upcoming">Proximo</option><option value="past">Pasado</option></select></div></div><div class="fg"><label class="fl">Donde aparece</label><select class="fs" id="evEditType"><option value="calendar">Solo Calendario</option><option value="featured">Proximo Evento + Calendario</option></select></div><div class="fr"><div class="fg"><label class="fl">Prev 1</label><input class="fi" type="number" id="evEditP1"></div><div class="fg"><label class="fl">Prev 2</label><input class="fi" type="number" id="evEditP2"></div><div class="fg"><label class="fl">Puerta</label><input class="fi" type="number" id="evEditP3"></div></div><div class="fg"><label class="fl">Link Ticketera</label><input class="fi" id="evEditLnk"></div><button class="btn btn-red" style="width:100%;margin-top:9px" onclick="updateEv()">Guardar Cambios</button></div></div><!-- MODAL ARTISTA -->
 <div class="m-ov" id="mAr">
 <div class="m-box">
   <button class="m-x" onclick="cM('mAr')">✕</button>
