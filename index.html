@@ -826,207 +826,7 @@ tr:hover td{background:rgba(255,255,255,.012)}
 
 
 
-<script>
-/* ─── SCROLL REVEAL ─── */
-(function(){const obs=new IntersectionObserver((entries)=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('is-visible');obs.unobserve(e.target)}})},{threshold:0.12,rootMargin:'0px 0px -40px 0px'});document.querySelectorAll('.reveal-on-scroll').forEach(el=>obs.observe(el))})();
-(function(){document.querySelectorAll('.event-cta').forEach(btn=>{const t=[...btn.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&n.textContent.trim());const l=t?t.textContent.trim():btn.textContent.trim();btn.setAttribute('data-text',l)})})();
-
-/* ─── SUPABASE ─── */
-const SURL='https://dtmulatpgeqoeaqbeujm.supabase.co';
-const SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0bXVsYXRwZ2Vxb2VhcWJldWptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQwNTEsImV4cCI6MjA5NTkzMDA1MX0.SPVb6cCMLeznSeSDe-eY8SZ2Ysazif5cx0pL79MQggk';
-const{createClient}=supabase;
-const db=createClient(SURL,SKEY);
-
-/* ─── HELPERS ─── */
-const fmt=n=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(n||0);
-const fmtD=d=>{if(!d)return'—';const p=d.split('-');return`${p[2]}/${p[1]}/${p[0]}`};
-function fmtDS(d){if(!d)return{day:'—',mon:'—',yr:'—'};const p=d.split('-');const m=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];return{day:p[2],mon:m[parseInt(p[1])-1],yr:p[0]}}
-const uid=()=>'fp'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
-const tkRev=(e,tks)=>{const t=(tks||[]).find(x=>x.event_id===e.id)||{};return(t.p1||0)*(e.price1||0)+(t.p2||0)*(e.price2||0)+(t.p3||0)*(e.price3||0)};
-const tkAll=(e,tks)=>{const t=(tks||[]).find(x=>x.event_id===e.id)||{};return(t.p1||0)+(t.p2||0)+(t.p3||0)+(t.free||0)};
-const evExp=(id,exs)=>(exs||[]).filter(x=>x.event_id===id).reduce((a,x)=>a+Number(x.amount),0);
-
-/* ─── DATA ─── */
-async function gEv(){const{data}=await db.from('events').select('*').order('date');return data||[]}
-async function gAr(){const{data}=await db.from('artists').select('*').order('name');return data||[]}
-async function gEx(){const{data}=await db.from('expenses').select('*').order('date');return data||[]}
-async function gTk(){const{data}=await db.from('tickets').select('*');return data||[]}
-
-/* ─── AUTH ─── */
-const showLogin=()=>{document.getElementById('loginOv').classList.add('open');document.getElementById('loginEmail').focus()};
-const closeLogin=()=>{document.getElementById('loginOv').classList.remove('open');document.getElementById('loginEmail').value='';document.getElementById('loginPw').value='';document.getElementById('loginErr').style.display='none'};
-async function doLogin(){
-  const email=document.getElementById('loginEmail').value;
-  const pw=document.getElementById('loginPw').value;
-  const{error}=await db.auth.signInWithPassword({email,password:pw});
-  if(error){document.getElementById('loginErr').style.display='block';document.getElementById('loginPw').value='';}
-  else{closeLogin();document.getElementById('publicView').style.display='none';document.getElementById('adminView').style.display='block';await rDash();await updateSb();}
-}
-async function aLogout(){
-  await db.auth.signOut();
-  document.getElementById('adminView').style.display='none';
-  document.getElementById('publicView').style.display='block';
-  await rPub();
-}
-
-/* ─── NAV ADMIN ─── */
-const PTITLES={dashboard:'Dashboard',events:'Eventos',artists:'Artistas',tickets:'Entradas & Ventas',expenses:'Gastos',reports:'Reportes P&L'};
-const PACTS={
-  events:`<button class="btn btn-red btn-sm" onclick="oM('mEv')">+ Nuevo Evento</button>`,
-  artists:`<button class="btn btn-red btn-sm" onclick="oM('mAr')">+ Artista</button>`,
-  tickets:`<button class="btn btn-red btn-sm" onclick="oMTk()">Actualizar Ventas</button>`,
-  expenses:`<button class="btn btn-red btn-sm" onclick="oMEx()">+ Gasto</button>`,
-  reports:`<button class="exp-btn" onclick="doExport('report')">Exportar CSV</button>`,
-};
-async function aGoTo(pg,btn){
-  document.querySelectorAll('.adm-pg').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.adm-ni').forEach(b=>b.classList.remove('active'));
-  document.getElementById('adm-'+pg).classList.add('active');
-  if(btn)btn.classList.add('active');
-  document.getElementById('admTitle').textContent=PTITLES[pg]||pg;
-  document.getElementById('admActs').innerHTML=`<button class="bk-btn" onclick="aLogout()">← Sitio</button>`+(PACTS[pg]||'');
-  const renders={dashboard:rDash,events:rEvents,artists:rArtists,tickets:rTickets,expenses:rExpenses,reports:rReports};
-  if(renders[pg])await renders[pg]();
-}
-
-/* ─── MODALS ─── */
-const oM=id=>document.getElementById(id).classList.add('open');
-const cM=id=>document.getElementById(id).classList.remove('open');
-document.querySelectorAll('.m-ov').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
-async function oMEx(){const evs=await gEv();document.getElementById('exEv').innerHTML=evs.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');document.getElementById('exDate').value=new Date().toISOString().split('T')[0];oM('mEx')}
-async function oMTk(){const evs=await gEv();const sel=document.getElementById('tkEv');sel.innerHTML=evs.map(e=>`<option value="${e.id}">${e.name} — ${fmtD(e.date)}</option>`).join('');await loadTkVals();oM('mTk')}
-async function loadTkVals(){const evId=document.getElementById('tkEv').value;const tks=await gTk();const t=tks.find(x=>x.event_id===evId)||{};document.getElementById('tkP1').value=t.p1||'';document.getElementById('tkP2').value=t.p2||'';document.getElementById('tkP3').value=t.p3||'';document.getElementById('tkFree').value=t.free||''}
-
-/* ─── SAVE ─── */
-async function saveEv(){
-  const ev={id:uid(),name:document.getElementById('evN').value||'Nuevo Evento',date:document.getElementById('evD').value,venue:document.getElementById('evV').value,flyer:document.getElementById('evFlyer').value,capacity:Number(document.getElementById('evCap').value)||300,link:document.getElementById('evLnk').value,headliner:document.getElementById('evHL').value,support:document.getElementById('evSup').value.split(',').map(s=>s.trim()).filter(Boolean),price1:Number(document.getElementById('evP1').value)||0,price2:Number(document.getElementById('evP2').value)||0,price3:Number(document.getElementById('evP3').value)||0,status:document.getElementById('evSt').value};
-  await db.from('events').insert(ev);cM('mEv');await rEvents();await rPub();
-}
-async function saveAr(){
-  const ar={id:uid(),name:document.getElementById('arN').value,origin:document.getElementById('arO').value,genre:document.getElementById('arG').value,agency:document.getElementById('arAg').value,ig:document.getElementById('arIG').value,fee:Number(document.getElementById('arFee').value)||0,bio:document.getElementById('arBio').value};
-  await db.from('artists').insert(ar);cM('mAr');await rArtists();
-}
-async function saveEx(){
-  const ex={id:uid(),event_id:document.getElementById('exEv').value,cat:document.getElementById('exCat').value,amount:Number(document.getElementById('exAmt').value)||0,description:document.getElementById('exDesc').value,date:document.getElementById('exDate').value};
-  await db.from('expenses').insert(ex);cM('mEx');await rExpenses();
-}
-async function saveTk(){
-  const evId=document.getElementById('tkEv').value;
-  const data={id:uid(),event_id:evId,p1:Number(document.getElementById('tkP1').value)||0,p2:Number(document.getElementById('tkP2').value)||0,p3:Number(document.getElementById('tkP3').value)||0,free:Number(document.getElementById('tkFree').value)||0};
-  await db.from('tickets').upsert(data,{onConflict:'event_id'});cM('mTk');await rTickets();
-}
-async function delRow(table,id,fn){await db.from(table).delete().eq('id',id);await fn();}
-
-/* ─── EXPORT ─── */
-async function doExport(type){
-  const evs=await gEv();const tks=await gTk();const exs=await gEx();let rows=[],fn='';
-  if(type==='report'){rows=[['Evento','Fecha','Entradas','Ingresos','Gastos','Resultado'],...evs.map(e=>{const rev=tkRev(e,tks);const exp=evExp(e.id,exs);return[e.name,e.date,tkAll(e,tks),rev,exp,rev-exp]})];fn='flashpoint_reporte.csv';}
-  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
-  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);a.download=fn;a.click();
-}
-
-/* ─── SIDEBAR ─── */
-async function updateSb(){} // placeholder
-
-/* ─── RENDER PUBLIC ─── */
-async function rPub(){
-  const evs=await gEv();
-  const upcoming=evs.filter(e=>e.status==='upcoming').sort((a,b)=>a.date.localeCompare(b.date));
-  const featured=upcoming[0];
-  // Featured event card
-  const featEl=document.getElementById('featuredEvent');
-  if(featEl){
-    if(featured){
-      const flyerHtml=featured.flyer?`<img src="${featured.flyer}" alt="${featured.headliner||''}">`:`<div style="min-height:500px;background:#0a0a0a;display:flex;align-items:center;justify-content:center;"><span style="font-family:'Bebas Neue',sans-serif;font-size:80px;color:#1a1a1a;">FP</span></div>`;
-      const btnHtml=featured.link?`<a href="${featured.link}" target="_blank" class="event-cta" style="display:inline-flex;text-decoration:none;">Conseguí tu entrada<span class="event-cta-arrow">→</span></a>`:`<span class="event-cta" style="opacity:0.35;cursor:default;">Próximamente</span>`;
-      featEl.innerHTML=`<div class="event-card featured is-visible"><div class="event-card-img">${flyerHtml}</div></div><div style="text-align:center;padding:36px 0 52px;">${btnHtml}</div>`;
-      document.querySelectorAll('.event-cta').forEach(btn=>{const t=[...btn.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&n.textContent.trim());const l=t?t.textContent.trim():btn.textContent.trim();btn.setAttribute('data-text',l)});
-    }
-  }
-  // Upcoming list
-  const listEl=document.getElementById('upcomingList');
-  if(listEl){
-    listEl.innerHTML=upcoming.length?upcoming.map(e=>{
-      const d=fmtDS(e.date);
-      const support=(e.support||[]).join(' b2b ');
-      return`<div class="upcoming-item is-visible">
-        <div><div class="upcoming-date">${d.day}</div><div class="upcoming-month">${d.mon}</div></div>
-        <div class="upcoming-divider"></div>
-        <div class="upcoming-info">
-          <div class="upcoming-artist">${e.headliner||'—'}${support?` + ${support}`:''}</div>
-          <div class="upcoming-venue">${e.venue||'—'}</div>
-        </div>
-        ${e.link?`<a href="${e.link}" target="_blank" class="upcoming-status" style="text-decoration:none;">Tickets →</a>`:`<div class="upcoming-status" style="border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.2);">TBA</div>`}
-      </div>`;
-    }).join(''):`<div class="upcoming-item is-visible" style="opacity:0.3;"><div><div class="upcoming-date">—</div><div class="upcoming-month">Próx</div></div><div class="upcoming-divider"></div><div class="upcoming-info"><div class="upcoming-artist">Próximamente</div><div class="upcoming-venue">Por confirmar</div></div><div class="upcoming-status" style="border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.2);">TBA</div></div>`;
-  }
-}
-
-/* ─── RENDER ADMIN ─── */
-async function rDash(){
-  const evs=await gEv();const tks=await gTk();const exs=await gEx();
-  const totRev=evs.reduce((a,e)=>a+tkRev(e,tks),0);
-  const totExp=exs.reduce((a,x)=>a+Number(x.amount),0);
-  const bal=totRev-totExp;
-  const totTk=evs.reduce((a,e)=>a+tkAll(e,tks),0);
-  document.getElementById('admMet').innerHTML=`
-    <div class="adm-m"><div class="adm-m-lbl">Ingresos</div><div class="adm-m-val g">${fmt(totRev)}</div></div>
-    <div class="adm-m"><div class="adm-m-lbl">Gastos</div><div class="adm-m-val r">${fmt(totExp)}</div></div>
-    <div class="adm-m"><div class="adm-m-lbl">Balance</div><div class="adm-m-val ${bal>=0?'g':'r'}">${fmt(bal)}</div></div>
-    <div class="adm-m"><div class="adm-m-lbl">Entradas Vendidas</div><div class="adm-m-val a">${totTk}</div></div>`;
-  const upco=evs.filter(e=>e.status==='upcoming').slice(0,4);
-  document.getElementById('admDashEvs').innerHTML=upco.length?upco.map(e=>{const s=tkAll(e,tks);const pct=Math.min(100,Math.round(s/e.capacity*100));return`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:14px;margin-bottom:8px"><div style="font-size:10px;color:var(--red);margin-bottom:3px">${fmtD(e.date)}</div><div style="font-size:15px;font-weight:700;margin-bottom:3px">${e.name}</div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div><div style="font-size:10px;color:var(--muted);margin-top:3px">${s}/${e.capacity} — ${fmt(tkRev(e,tks))}</div></div>`}).join(''):`<div class="empty"><div class="empty-ico">◎</div>Sin eventos próximos</div>`;
-  document.getElementById('admDashTable').innerHTML=`<table><thead><tr><th>Evento</th><th>Ingresos</th><th>Gastos</th><th>Resultado</th></tr></thead><tbody>${evs.map(e=>{const rev=tkRev(e,tks);const exp=evExp(e.id,exs);const b=rev-exp;return`<tr><td><strong>${e.name}</strong></td><td style="color:var(--green)">${fmt(rev)}</td><td style="color:var(--red)">${fmt(exp)}</td><td style="color:${b>=0?'var(--green)':'var(--red)'}"><strong>${fmt(b)}</strong></td></tr>`}).join('')}</tbody></table>`;
-  document.getElementById('admActs').innerHTML=`<button class="bk-btn" onclick="aLogout()">← Sitio</button>`;
-}
-async function rEvents(){
-  const evs=await gEv();const tks=await gTk();
-  document.getElementById('admEvList').innerHTML=evs.length?evs.map(e=>{const s=tkAll(e,tks);const pct=Math.min(100,Math.round(s/e.capacity*100));return`<div class="adm-ev-card"><div class="ec-date">${fmtD(e.date)}</div><div class="ec-name">${e.name}</div><div class="ec-venue">${e.venue}</div><div class="ec-pills"><span class="pill hl">${e.headliner||'—'}</span>${(e.support||[]).map(s=>`<span class="pill">${s}</span>`).join('')}</div><div class="prog-lbl"><span>Ocupación</span><span>${pct}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div><div style="margin-top:10px;display:flex;gap:7px"><button onclick="oMTk()" class="btn btn-ghost btn-xs">Ventas</button><button onclick="delRow('events','${e.id}',rEvents)" class="btn btn-ghost btn-xs" style="color:var(--muted)">Eliminar</button></div></div>`}).join(''):`<div class="empty" style="grid-column:1/-1"><div class="empty-ico">◎</div>Sin eventos.</div>`;
-}
-async function rArtists(){
-  const ars=await gAr();
-  document.getElementById('admArTable').innerHTML=`<table><thead><tr><th>Artista</th><th>Origen</th><th>Género</th><th>Agencia</th><th>Caché</th><th></th></tr></thead><tbody>${ars.length?ars.map(a=>`<tr><td><strong>${a.name}</strong></td><td style="color:var(--muted)">${a.origin}</td><td>${a.genre}</td><td style="color:var(--muted)">${a.agency||'—'}</td><td style="color:var(--green)">${fmt(a.fee||0)}</td><td><button onclick="delRow('artists','${a.id}',rArtists)" class="btn btn-ghost btn-xs">✕</button></td></tr>`).join(''):`<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Sin artistas</td></tr>`}</tbody></table>`;
-}
-async function rTickets(){
-  const evs=await gEv();const tks=await gTk();
-  let tRev=0,tSold=0,tCap=0;
-  evs.forEach(e=>{tRev+=tkRev(e,tks);tSold+=tkAll(e,tks);tCap+=e.capacity});
-  document.getElementById('admTkSum').innerHTML=`<div class="fc"><div class="fc-lbl">Ingresos Totales</div><div class="fc-val inc">${fmt(tRev)}</div></div><div class="fc"><div class="fc-lbl">Entradas Vendidas</div><div class="fc-val" style="color:var(--amber)">${tSold}</div></div><div class="fc"><div class="fc-lbl">Ocupación</div><div class="fc-val w">${tCap?Math.round(tSold/tCap*100):0}%</div></div>`;
-  document.getElementById('admTkTable').innerHTML=`<table><thead><tr><th>Evento</th><th>Prev 1</th><th>Prev 2</th><th>Puerta</th><th>Cortesías</th><th>Ingreso</th></tr></thead><tbody>${evs.map(e=>{const t=tks.find(x=>x.event_id===e.id)||{};return`<tr><td><strong>${e.name}</strong></td><td>${t.p1||0}</td><td>${t.p2||0}</td><td>${t.p3||0}</td><td>${t.free||0}</td><td style="color:var(--green)">${fmt(tkRev(e,tks))}</td></tr>`}).join('')}</tbody></table>`;
-}
-async function rExpenses(){
-  const exs=await gEx();const evs=await gEv();
-  const tot=exs.reduce((a,x)=>a+Number(x.amount),0);
-  const cats=[...new Set(exs.map(x=>x.cat))];
-  document.getElementById('admExSum').innerHTML=`<div class="fc"><div class="fc-lbl">Total Gastos</div><div class="fc-val exp">${fmt(tot)}</div></div><div class="fc"><div class="fc-lbl">Categorías</div><div class="fc-val w">${cats.length}</div></div><div class="fc"><div class="fc-lbl">Registros</div><div class="fc-val w">${exs.length}</div></div>`;
-  document.getElementById('admExTable').innerHTML=`<table><thead><tr><th>Descripción</th><th>Evento</th><th>Categoría</th><th>Monto</th><th>Fecha</th><th></th></tr></thead><tbody>${exs.length?exs.map(x=>{const ev=evs.find(e=>e.id===x.event_id);return`<tr><td>${x.description}</td><td style="color:var(--muted)">${ev?ev.name:'—'}</td><td>${x.cat}</td><td style="color:var(--red)">${fmt(x.amount)}</td><td style="color:var(--muted)">${fmtD(x.date)}</td><td><button onclick="delRow('expenses','${x.id}',rExpenses)" class="btn btn-ghost btn-xs">✕</button></td></tr>`}).join(''):`<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Sin gastos</td></tr>`}</tbody></table>`;
-}
-async function rReports(){
-  const evs=await gEv();const tks=await gTk();const exs=await gEx();
-  const tR=evs.reduce((a,e)=>a+tkRev(e,tks),0);const tE=evs.reduce((a,e)=>a+evExp(e.id,exs),0);const b=tR-tE;
-  document.getElementById('admRepSum').innerHTML=`<div class="fc"><div class="fc-lbl">Ingresos</div><div class="fc-val inc">${fmt(tR)}</div></div><div class="fc"><div class="fc-lbl">Gastos</div><div class="fc-val exp">${fmt(tE)}</div></div><div class="fc"><div class="fc-lbl">Resultado</div><div class="fc-val ${b>=0?'inc':'exp'}">${fmt(b)}</div></div>`;
-  document.getElementById('admRepTable').innerHTML=`<table><thead><tr><th>Evento</th><th>Fecha</th><th>Ingresos</th><th>Gastos</th><th>Resultado</th></tr></thead><tbody>${evs.map(e=>{const rev=tkRev(e,tks);const exp=evExp(e.id,exs);const bl=rev-exp;return`<tr><td><strong>${e.name}</strong></td><td>${fmtD(e.date)}</td><td style="color:var(--green)">${fmt(rev)}</td><td style="color:var(--red)">${fmt(exp)}</td><td style="color:${bl>=0?'var(--green)':'var(--red)'}"><strong>${fmt(bl)}</strong></td></tr>`}).join('')}</tbody></table>`;
-}
-
-/* ─── REALTIME + BOOT ─── */
-function setupRealtime(){
-  db.channel('db-changes')
-    .on('postgres_changes',{event:'*',schema:'public',table:'events'},async()=>{await rPub()})
-    .on('postgres_changes',{event:'*',schema:'public',table:'artists'},async()=>{await rPub()})
-    .subscribe();
-}
-async function boot(){
-  await rPub();
-  const{data:{session}}=await db.auth.getSession();
-  if(session){
-    document.getElementById('publicView').style.display='none';
-    document.getElementById('adminView').style.display='block';
-    await rDash();
-  }
-  setupRealtime();
-}
-boot();
-</script>
+<script src="app.js"></script>
 
 <!-- LOGIN OVERLAY -->
 <div class="login-ov" id="loginOv">
@@ -1069,26 +869,10 @@ boot();
       <div class="adm-tb-title" id="admTitle">Dashboard</div>
       <div class="adm-tb-acts" id="admActs"></div>
     </div>
-    <!-- DASHBOARD -->
-    <div class="adm-pg active" id="adm-dashboard">
-      <div class="adm-metrics" id="admMet"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        <div><div class="stitle">Próximos eventos</div><div id="admDashEvs"></div></div>
-        <div><div class="stitle">Resumen financiero</div><div id="admDashTable"></div></div>
-      </div>
-    </div>
-    <!-- EVENTOS -->
-    <div class="adm-pg" id="adm-events">
-      <div class="adm-ev-grid" id="admEvList"></div>
-    </div>
-    <!-- ARTISTAS -->
-    <div class="adm-pg" id="adm-artists">
-      <div class="tw"><div id="admArTable"></div></div>
-    </div>
-    <!-- ENTRADAS -->
-    <div class="adm-pg" id="adm-tickets">
-      <div class="fin-sum" id="admTkSum"></div>
-      <div class="tw"><div id="admTkTable"></div></div>
+    <div class="adm-pg active" id="adm-dashboard" style="padding:30px 34px"><div id="admDashContent"></div></div>
+    <div class="adm-pg" id="adm-featured" style="padding:30px 34px"><p style="color:var(--muted);font-size:13px;margin-bottom:20px">Cargá el flyer y el link de la ticketera.</p><div style="max-width:500px" id="admFeaturedForm"></div></div>
+    <div class="adm-pg" id="adm-calendar" style="padding:30px 34px"><p style="color:var(--muted);font-size:13px;margin-bottom:16px">Artistas en la sección Calendario del sitio.</p><div id="admCalList"></div></div>
+    <div style="display:none" id="adm-events"><div class="tw"><div id="admTkTable"></div></div>
     </div>
     <!-- GASTOS -->
     <div class="adm-pg" id="adm-expenses">
@@ -1104,54 +888,15 @@ boot();
 </div>
 </div>
 
-<!-- MODAL EVENTO -->
-<div class="m-ov" id="mEv">
-<div class="m-box">
-  <button class="m-x" onclick="cM('mEv')">✕</button>
-  <div class="m-title">Nuevo Evento</div><div class="m-sub">Completá los datos del evento</div>
-  <div class="fr"><div class="fg"><label class="fl">Nombre del evento</label><input class="fi" id="evN" placeholder="Flashpoint #02"></div><div class="fg"><label class="fl">Fecha</label><input class="fi" type="date" id="evD"></div></div>
-  <div class="fg"><label class="fl">Venue</label><input class="fi" id="evV" placeholder="Melt Underground | Recoleta"></div>
-  <div class="fg"><label class="fl">URL del Flyer</label><input class="fi" id="evFlyer" placeholder="https://i.imgur.com/..."></div>
-  <div class="fr"><div class="fg"><label class="fl">Headliner</label><input class="fi" id="evHL" placeholder="Charlie"></div><div class="fg"><label class="fl">Soporte (separados por coma)</label><input class="fi" id="evSup" placeholder="Tomas Benedini, Martin Pose"></div></div>
-  <div class="fr"><div class="fg"><label class="fl">Capacidad</label><input class="fi" type="number" id="evCap" placeholder="300"></div><div class="fg"><label class="fl">Estado</label><select class="fs" id="evSt"><option value="upcoming">Próximo</option><option value="past">Pasado</option></select></div></div>
-  <div class="fr"><div class="fg"><label class="fl">Preventa 1 ($)</label><input class="fi" type="number" id="evP1" placeholder="3500"></div><div class="fg"><label class="fl">Preventa 2 ($)</label><input class="fi" type="number" id="evP2" placeholder="5000"></div><div class="fg"><label class="fl">Puerta ($)</label><input class="fi" type="number" id="evP3" placeholder="7000"></div></div>
-  <div class="fg"><label class="fl">Link Ticketera</label><input class="fi" id="evLnk" placeholder="https://passline.com/..."></div>
-  <button class="btn btn-red" style="width:100%;margin-top:9px" onclick="saveEv()">Guardar Evento</button>
+<!-- MODAL CALENDARIO -->
+<div class="m-ov" id="mCal"><div class="m-box">
+  <button class="m-x" onclick="cM('mCal')">X</button>
+  <div class="m-title">Agregar al Calendario</div>
+  <div class="m-sub">Nombre del artista y fecha</div>
+  <div class="fg"><label class="fl">Nombre del Artista</label><input class="fi" id="calArtist" placeholder="Andrei Ciubuc"></div>
+  <div class="fg"><label class="fl">Fecha (opcional)</label><input class="fi" type="date" id="calDate"></div>
+  <button class="btn btn-red" style="width:100%;margin-top:9px" onclick="saveCalendar()">Agregar</button>
 </div></div>
 
-<!-- MODAL ARTISTA -->
-<div class="m-ov" id="mAr">
-<div class="m-box">
-  <button class="m-x" onclick="cM('mAr')">✕</button>
-  <div class="m-title">Nuevo Artista</div><div class="m-sub">Datos para el lineup</div>
-  <div class="fr"><div class="fg"><label class="fl">Nombre Artístico</label><input class="fi" id="arN" placeholder="Charlie"></div><div class="fg"><label class="fl">Origen</label><input class="fi" id="arO" placeholder="Rumania"></div></div>
-  <div class="fr"><div class="fg"><label class="fl">Género</label><input class="fi" id="arG" placeholder="Rominimal / Microhouse"></div><div class="fg"><label class="fl">Agencia</label><input class="fi" id="arAg" placeholder="db Artists"></div></div>
-  <div class="fr"><div class="fg"><label class="fl">Instagram</label><input class="fi" id="arIG" placeholder="@charlie____music"></div><div class="fg"><label class="fl">Caché (ARS $)</label><input class="fi" type="number" id="arFee" placeholder="180000"></div></div>
-  <div class="fg"><label class="fl">Bio corta</label><textarea class="ft" id="arBio" placeholder="Selector de la escena rumana..."></textarea></div>
-  <button class="btn btn-red" style="width:100%;margin-top:9px" onclick="saveAr()">Guardar Artista</button>
-</div></div>
-
-<!-- MODAL GASTO -->
-<div class="m-ov" id="mEx">
-<div class="m-box">
-  <button class="m-x" onclick="cM('mEx')">✕</button>
-  <div class="m-title">Registrar Gasto</div><div class="m-sub">Asociá el gasto a un evento</div>
-  <div class="fg"><label class="fl">Evento</label><select class="fs" id="exEv"></select></div>
-  <div class="fr"><div class="fg"><label class="fl">Categoría</label><select class="fs" id="exCat"><option>Caché Artista</option><option>Sonido / Técnica</option><option>Producción / Deco</option><option>Publicidad / Marketing</option><option>Venue / Lugar</option><option>Seguridad</option><option>Rider / Hospitalidad</option><option>Transporte</option><option>Varios</option></select></div><div class="fg"><label class="fl">Monto (ARS $)</label><input class="fi" type="number" id="exAmt" placeholder="50000"></div></div>
-  <div class="fg"><label class="fl">Descripción</label><input class="fi" id="exDesc" placeholder="Detalle del gasto"></div>
-  <div class="fg"><label class="fl">Fecha</label><input class="fi" type="date" id="exDate"></div>
-  <button class="btn btn-red" style="width:100%;margin-top:9px" onclick="saveEx()">Registrar Gasto</button>
-</div></div>
-
-<!-- MODAL TICKETS -->
-<div class="m-ov" id="mTk">
-<div class="m-box">
-  <button class="m-x" onclick="cM('mTk')">✕</button>
-  <div class="m-title">Actualizar Ventas</div>
-  <div class="fg"><label class="fl">Evento</label><select class="fs" id="tkEv" onchange="loadTkVals()"></select></div>
-  <div class="fr"><div class="fg"><label class="fl">Preventa 1</label><input class="fi" type="number" id="tkP1" placeholder="0"></div><div class="fg"><label class="fl">Preventa 2</label><input class="fi" type="number" id="tkP2" placeholder="0"></div></div>
-  <div class="fr"><div class="fg"><label class="fl">Puerta</label><input class="fi" type="number" id="tkP3" placeholder="0"></div><div class="fg"><label class="fl">Cortesías</label><input class="fi" type="number" id="tkFree" placeholder="0"></div></div>
-  <button class="btn btn-red" style="width:100%;margin-top:9px" onclick="saveTk()">Actualizar Ventas</button>
-</div></div>
 </body>
 </html>
