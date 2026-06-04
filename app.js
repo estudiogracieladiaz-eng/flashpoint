@@ -175,9 +175,12 @@ function rAdminFeatured(){
     // FLYER
     html+='<div style="border:1px solid var(--border);border-radius:6px;padding:20px;margin-bottom:14px">';
     html+='<div class="stitle" style="margin-bottom:14px">🖼 Flyer del evento</div>';
-    html+='<div class="fg"><label class="fl">URL de la imagen del flyer</label>';
+    html+='<div class="fg"><label class="fl">Subir imagen desde tu computadora</label>';
+    html+='<input type="file" accept="image/*" id="featFlyerFile" onchange="previewFlyer(this)" style="width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--white);font-size:13px;padding:9px 12px;border-radius:4px;cursor:pointer"></div>';
+    html+='<div id="flyerPreview" style="margin-bottom:12px">'+(r[0][0]&&r[0][0].value?'<img src="'+r[0][0].value+'" style="max-height:120px;border-radius:4px;border:1px solid var(--border)">':'')+'</div>';
+    html+='<div class="fg"><label class="fl">O pegá una URL directamente</label>';
     html+='<input class="fi" id="featFlyer" value="'+(r[0][0]?r[0][0].value:'')+'" placeholder="https://i.imgur.com/..."></div>';
-    html+='<button class="btn btn-red btn-sm" onclick="saveField(\'flyer_url\',\'featFlyer\')">Guardar Flyer</button>';
+    html+='<button class="btn btn-red btn-sm" onclick="saveFlyer()">Guardar Flyer</button>';
     html+='</div>';
     // TICKETERA
     html+='<div style="border:1px solid var(--border);border-radius:6px;padding:20px;margin-bottom:14px">';
@@ -198,6 +201,26 @@ function rAdminFeatured(){
     html+='<button class="btn btn-red btn-sm" onclick="saveUbicacion()">Guardar Ubicación</button>';
     html+='</div>';
     document.getElementById('admFeaturedForm').innerHTML=html;
+  });
+}
+
+function previewFlyer(input){
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  var reader=new FileReader();
+  reader.onload=function(e){
+    document.getElementById('featFlyer').value=e.target.result;
+    document.getElementById('flyerPreview').innerHTML='<img src="'+e.target.result+'" style="max-height:120px;border-radius:4px;border:1px solid var(--border);margin-top:8px">';
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveFlyer(){
+  var val=document.getElementById('featFlyer').value.trim();
+  if(!val){alert('Seleccioná una imagen o pegá una URL');return;}
+  dbUpsert('settings',{key:'flyer_url',value:val}).then(function(ok){
+    if(ok){alert('Flyer guardado correctamente');loadPublic();}
+    else{alert('Error al guardar. Verificá tu sesión.');}
   });
 }
 
