@@ -645,7 +645,7 @@ tr:hover td{background:rgba(255,255,255,.012)}
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-TS3FBVGHEC');
-</script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</script>
 </head>
 <body>
 <div id="publicView">
@@ -847,7 +847,38 @@ tr:hover td{background:rgba(255,255,255,.012)}
 /* ─── SUPABASE ─── */
 const SURL='https://dtmulatpgeqoeaqbeujm.supabase.co';
 const SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0bXVsYXRwZ2Vxb2VhcWJldWptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQwNTEsImV4cCI6MjA5NTkzMDA1MX0.SPVb6cCMLeznSeSDe-eY8SZ2Ysazif5cx0pL79MQggk';
-const db=window.supabase.createClient(SURL,SKEY);
+let AUTH_TOKEN=SKEY;
+const H=(tok)=>({'apikey':SKEY,'Authorization':'Bearer '+tok,'Content-Type':'application/json'});
+const db={
+  from:(t)=>({
+    select:()=>{const p=fetch(SURL+'/rest/v1/'+t+'?select=*',{headers:H(AUTH_TOKEN)}).then(r=>r.json()).then(data=>({data}));p.order=(col)=>fetch(SURL+'/rest/v1/'+t+'?select=*&order='+col+'.asc',{headers:H(AUTH_TOKEN)}).then(r=>r.json()).then(data=>({data}));return p;},
+    insert:(d)=>fetch(SURL+'/rest/v1/'+t,{method:'POST',headers:{...H(AUTH_TOKEN),'Prefer':'return=minimal'},body:JSON.stringify(d)}).then(async r=>{if(!r.ok){const e=await r.text();console.error('INSERT error:',e);}return{error:r.ok?null:r.status}}),
+    update:(d)=>({eq:(col,val)=>fetch(SURL+'/rest/v1/'+t+'?'+col+'=eq.'+val,{method:'PATCH',headers:{...H(AUTH_TOKEN),'Prefer':'return=minimal'},body:JSON.stringify(d)}).then(r=>({error:r.ok?null:r.status}))}),
+    delete:()=>({eq:(col,val)=>fetch(SURL+'/rest/v1/'+t+'?'+col+'=eq.'+val,{method:'DELETE',headers:H(AUTH_TOKEN)}).then(r=>({error:r.ok?null:r.status}))}),
+    upsert:(d,opt)=>fetch(SURL+'/rest/v1/'+t,{method:'POST',headers:{...H(AUTH_TOKEN),'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(d)}).then(r=>({error:r.ok?null:r.status}))
+  }),
+  auth:{
+    signInWithPassword:async({email,password})=>{
+      const r=await fetch(SURL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+      const data=await r.json();
+      if(data.access_token){AUTH_TOKEN=data.access_token;localStorage.setItem('fp_tok',data.access_token);return{error:null};}
+      return{error:data};
+    },
+    signOut:async()=>{
+      await fetch(SURL+'/auth/v1/logout',{method:'POST',headers:H(AUTH_TOKEN)});
+      AUTH_TOKEN=SKEY;localStorage.removeItem('fp_tok');return{};
+    },
+    getSession:async()=>{
+      const tok=localStorage.getItem('fp_tok');
+      if(!tok)return{data:{session:null}};
+      const r=await fetch(SURL+'/auth/v1/user',{headers:{'apikey':SKEY,'Authorization':'Bearer '+tok}});
+      if(r.ok){AUTH_TOKEN=tok;return{data:{session:{access_token:tok}}};}
+      localStorage.removeItem('fp_tok');return{data:{session:null}};
+    }
+  },
+  channel:()=>({on:()=>({on:()=>({subscribe:()=>{}})})}),
+  removeChannel:()=>{}
+};
 
 /* ─── HELPERS ─── */
 const fmt=n=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(n||0);
