@@ -166,27 +166,60 @@ function rAdminDash(){
 function rAdminFeatured(){
   Promise.all([
     dbGet('settings','key=eq.flyer_url'),
-    dbGet('settings','key=eq.ticket_url')
-  ]).then(function(results){
-    var flyer=results[0];var ticket=results[1];
-    document.getElementById('admFeaturedForm').innerHTML=
-      '<div class="fg"><label class="fl">URL del Flyer (imagen del evento)</label>'+
-      '<input class="fi" id="featFlyer" value="'+(flyer[0]?flyer[0].value:'')+'" placeholder="https://i.imgur.com/..."></div>'+
-      '<div class="fg"><label class="fl">Link Ticketera (botón rojo del sitio)</label>'+
-      '<input class="fi" id="featTicket" value="'+(ticket[0]?ticket[0].value:'')+'" placeholder="https://passline.com/..."></div>'+
-      '<button class="btn btn-red" style="width:100%;margin-top:12px" onclick="saveFeatured()">Guardar</button>';
+    dbGet('settings','key=eq.ticket_url'),
+    dbGet('settings','key=eq.venue_name'),
+    dbGet('settings','key=eq.venue_address'),
+    dbGet('settings','key=eq.maps_url')
+  ]).then(function(r){
+    var html='';
+    // FLYER
+    html+='<div style="border:1px solid var(--border);border-radius:6px;padding:20px;margin-bottom:14px">';
+    html+='<div class="stitle" style="margin-bottom:14px">🖼 Flyer del evento</div>';
+    html+='<div class="fg"><label class="fl">URL de la imagen del flyer</label>';
+    html+='<input class="fi" id="featFlyer" value="'+(r[0][0]?r[0][0].value:'')+'" placeholder="https://i.imgur.com/..."></div>';
+    html+='<button class="btn btn-red btn-sm" onclick="saveField(\'flyer_url\',\'featFlyer\')">Guardar Flyer</button>';
+    html+='</div>';
+    // TICKETERA
+    html+='<div style="border:1px solid var(--border);border-radius:6px;padding:20px;margin-bottom:14px">';
+    html+='<div class="stitle" style="margin-bottom:14px">🎟 Link Ticketera</div>';
+    html+='<div class="fg"><label class="fl">Link del botón rojo "Conseguí tu entrada"</label>';
+    html+='<input class="fi" id="featTicket" value="'+(r[1][0]?r[1][0].value:'')+'" placeholder="https://passline.com/..."></div>';
+    html+='<button class="btn btn-red btn-sm" onclick="saveField(\'ticket_url\',\'featTicket\')">Guardar Ticketera</button>';
+    html+='</div>';
+    // UBICACION
+    html+='<div style="border:1px solid var(--border);border-radius:6px;padding:20px;margin-bottom:14px">';
+    html+='<div class="stitle" style="margin-bottom:14px">📍 Ubicación del evento</div>';
+    html+='<div class="fg"><label class="fl">Nombre del venue</label>';
+    html+='<input class="fi" id="featVenueName" value="'+(r[2][0]?r[2][0].value:'')+'" placeholder="Melt Underground"></div>';
+    html+='<div class="fg"><label class="fl">Dirección</label>';
+    html+='<input class="fi" id="featVenueAddr" value="'+(r[3][0]?r[3][0].value:'')+'" placeholder="Uriarte · Palermo · Buenos Aires"></div>';
+    html+='<div class="fg"><label class="fl">Link Google Maps</label>';
+    html+='<input class="fi" id="featMapsUrl" value="'+(r[4][0]?r[4][0].value:'')+'" placeholder="https://maps.google.com/..."></div>';
+    html+='<button class="btn btn-red btn-sm" onclick="saveUbicacion()">Guardar Ubicación</button>';
+    html+='</div>';
+    document.getElementById('admFeaturedForm').innerHTML=html;
   });
 }
 
-function saveFeatured(){
-  var flyer=document.getElementById('featFlyer').value.trim();
-  var ticket=document.getElementById('featTicket').value.trim();
-  Promise.all([
-    dbUpsert('settings',{key:'flyer_url',value:flyer}),
-    dbUpsert('settings',{key:'ticket_url',value:ticket})
-  ]).then(function(results){
-    if(results[0]&&results[1]){alert('Guardado correctamente');loadPublic();}
+function saveField(key,inputId){
+  var val=document.getElementById(inputId).value.trim();
+  dbUpsert('settings',{key:key,value:val}).then(function(ok){
+    if(ok){alert('Guardado correctamente');loadPublic();}
     else{alert('Error al guardar. Verificá tu sesión.');}
+  });
+}
+
+function saveUbicacion(){
+  var name=document.getElementById('featVenueName').value.trim();
+  var addr=document.getElementById('featVenueAddr').value.trim();
+  var maps=document.getElementById('featMapsUrl').value.trim();
+  Promise.all([
+    dbUpsert('settings',{key:'venue_name',value:name}),
+    dbUpsert('settings',{key:'venue_address',value:addr}),
+    dbUpsert('settings',{key:'maps_url',value:maps})
+  ]).then(function(r){
+    if(r[0]&&r[1]&&r[2]){alert('Ubicación guardada');loadPublic();}
+    else{alert('Error al guardar.');}
   });
 }
 
@@ -250,6 +283,20 @@ function loadPublic(){
       featEl.innerHTML='<div class="event-card featured is-visible"><div class="event-card-img">'+flyerHtml+'</div></div><div style="text-align:center;padding:36px 0 52px;">'+btnHtml+'</div>';
     }
   }).catch(function(e){console.error('Featured load error',e);});
+
+  // Update venue label if set
+  Promise.all([
+    dbGet('settings','key=eq.venue_name'),
+    dbGet('settings','key=eq.venue_address'),
+    dbGet('settings','key=eq.maps_url')
+  ]).then(function(r){
+    var name=r[0][0]?r[0][0].value:null;
+    var addr=r[1][0]?r[1][0].value:null;
+    var maps=r[2][0]?r[2][0].value:null;
+    if(name){var el=document.querySelector('.map-label-venue');if(el)el.textContent=name;}
+    if(addr){var el=document.querySelector('.map-label-addr');if(el)el.textContent=addr;}
+    if(maps){var el=document.querySelector('.map-container');if(el)el.href=maps;}
+  });
 
   dbGet('calendar','select=*&order=date.asc&status=eq.upcoming').then(function(cal){
     var listEl=document.getElementById('upcomingList');
