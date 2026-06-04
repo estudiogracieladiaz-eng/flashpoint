@@ -912,7 +912,7 @@ async function loadTkVals(){const evId=document.getElementById('tkEv').value;con
 
 /* ─── SAVE ─── */
 async function saveEv(){
-  const ev={id:uid(),name:document.getElementById('evN').value||'Nuevo Evento',date:document.getElementById('evD').value,venue:document.getElementById('evV').value,flyer:document.getElementById('evFlyer').value,capacity:Number(document.getElementById('evCap').value)||300,link:document.getElementById('evLnk').value,headliner:document.getElementById('evHL').value,support:document.getElementById('evSup').value.split(',').map(s=>s.trim()).filter(Boolean),price1:Number(document.getElementById('evP1').value)||0,price2:Number(document.getElementById('evP2').value)||0,price3:Number(document.getElementById('evP3').value)||0,status:document.getElementById('evSt').value,type:document.getElementById('evType').value||'calendar'};
+  const ev={id:uid(),name:document.getElementById('evN').value||'Nuevo Evento',date:document.getElementById('evD').value,venue:document.getElementById('evV').value,flyer:document.getElementById('evFlyer').value,capacity:Number(document.getElementById('evCap').value)||300,link:document.getElementById('evLnk').value,headliner:document.getElementById('evHL').value,support:document.getElementById('evSup').value.split(',').map(s=>s.trim()).filter(Boolean),price1:Number(document.getElementById('evP1').value)||0,price2:Number(document.getElementById('evP2').value)||0,price3:Number(document.getElementById('evP3').value)||0,status:document.getElementById('evSt').value,event_type:document.getElementById('evType').value||'calendar'};
   await db.from('events').insert(ev);cM('mEv');await rEvents();await rPub();
 }
 async function saveAr(){
@@ -945,7 +945,7 @@ async function updateSb(){} // placeholder
 async function rPub(){
   const evs=await gEv();
   const upcoming=evs.filter(e=>e.status==='upcoming').sort((a,b)=>a.date.localeCompare(b.date));
-  const featured=upcoming.find(e=>e.type==='featured')||null;
+  const featured=upcoming.find(e=>e.event_type==='featured')||null;
   const calendarEvs=upcoming;
   // Featured event card
   const featEl=document.getElementById('featuredEvent');
@@ -1033,7 +1033,7 @@ async function openEditEv(id){
   document.getElementById('evEditSup').value=(e.support||[]).join(', ');
   document.getElementById('evEditCap').value=e.capacity||300;
   document.getElementById('evEditSt').value=e.status||'upcoming';
-  document.getElementById('evEditType').value=e.type||'calendar';
+  document.getElementById('evEditType').value=e.event_type||'calendar';
   document.getElementById('evEditP1').value=e.price1||0;
   document.getElementById('evEditP2').value=e.price2||0;
   document.getElementById('evEditP3').value=e.price3||0;
@@ -1042,7 +1042,7 @@ async function openEditEv(id){
 }
 async function updateEv(){
   const id=document.getElementById('evEditId').value;
-  const ev={name:document.getElementById('evEditN').value,date:document.getElementById('evEditD').value,venue:document.getElementById('evEditV').value,flyer:document.getElementById('evEditFlyer').value,headliner:document.getElementById('evEditHL').value,support:document.getElementById('evEditSup').value.split(',').map(s=>s.trim()).filter(Boolean),capacity:Number(document.getElementById('evEditCap').value)||300,status:document.getElementById('evEditSt').value,type:document.getElementById('evEditType').value||'calendar',price1:Number(document.getElementById('evEditP1').value)||0,price2:Number(document.getElementById('evEditP2').value)||0,price3:Number(document.getElementById('evEditP3').value)||0,link:document.getElementById('evEditLnk').value};
+  const ev={name:document.getElementById('evEditN').value,date:document.getElementById('evEditD').value,venue:document.getElementById('evEditV').value,flyer:document.getElementById('evEditFlyer').value,headliner:document.getElementById('evEditHL').value,support:document.getElementById('evEditSup').value.split(',').map(s=>s.trim()).filter(Boolean),capacity:Number(document.getElementById('evEditCap').value)||300,status:document.getElementById('evEditSt').value,event_type:document.getElementById('evEditType').value||'calendar',price1:Number(document.getElementById('evEditP1').value)||0,price2:Number(document.getElementById('evEditP2').value)||0,price3:Number(document.getElementById('evEditP3').value)||0,link:document.getElementById('evEditLnk').value};
   await db.from('events').update(ev).eq('id',id);
   cM('mEvEdit');await rEvents();await rPub();
 }/* ─── REALTIME + BOOT ─── */
